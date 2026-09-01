@@ -1,5 +1,10 @@
 version: 0.2
 
+env:
+  variables:
+    AWS_ACCOUNT_ID: "431988153353"
+    AWS_REGION: "eu-central-1"
+
 phases:
   install:
     runtime-versions:
@@ -10,22 +15,25 @@ phases:
       - java -version
       - echo "Using Node:"
       - node --version
+      - echo "Using Docker:"
+      - docker --version
+
+  pre_build:
+    commands:
+      - echo "Logging in to Amazon ECR..."
+      - ECR_REGISTRY=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+      - IMAGE_TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - echo "Image tag = $IMAGE_TAG"
 
   build:
     commands:
-      - echo "Building Eureka Server..."
+      - echo "Building backend..."
+
       - mvn -B -DskipTests package -f backend/eureka-server/pom.xml
-
-      - echo "Building API Gateway..."
       - mvn -B -DskipTests package -f backend/api-gateway/pom.xml
-
-      - echo "Building User Service..."
       - mvn -B -DskipTests package -f backend/user-service/pom.xml
-
-      - echo "Building Task Service..."
       - mvn -B -DskipTests package -f backend/task-service/pom.xml
-
-      - echo "Building AI Service..."
       - mvn -B -DskipTests package -f backend/ai-service/pom.xml
 
       - echo "Building Angular frontend..."
@@ -34,6 +42,39 @@ phases:
       - npm run build
       - cd ..
 
+      - echo "Building Docker images..."
+
+      - docker build -t $ECR_REGISTRY/smarttask/eureka-server:$IMAGE_TAG backend/eureka-server
+      - docker build -t $ECR_REGISTRY/smarttask/api-gateway:$IMAGE_TAG backend/api-gateway
+      - docker build -t $ECR_REGISTRY/smarttask/user-service:$IMAGE_TAG backend/user-service
+      - docker build -t $ECR_REGISTRY/smarttask/task-service:$IMAGE_TAG backend/task-service
+      - docker build -t $ECR_REGISTRY/smarttask/ai-service:$IMAGE_TAG backend/ai-service
+
+      - echo "Tagging images as latest..."
+
+      - docker tag $ECR_REGISTRY/smarttask/eureka-server:$IMAGE_TAG $ECR_REGISTRY/smarttask/eureka-server:latest
+      - docker tag $ECR_REGISTRY/smarttask/api-gateway:$IMAGE_TAG $ECR_REGISTRY/smarttask/api-gateway:latest
+      - docker tag $ECR_REGISTRY/smarttask/user-service:$IMAGE_TAG $ECR_REGISTRY/smarttask/user-service:latest
+      - docker tag $ECR_REGISTRY/smarttask/task-service:$IMAGE_TAG $ECR_REGISTRY/smarttask/task-service:latest
+      - docker tag $ECR_REGISTRY/smarttask/ai-service:$IMAGE_TAG $ECR_REGISTRY/smarttask/ai-service:latest
+
+      - echo "Pushing Docker images to ECR..."
+
+      - docker push $ECR_REGISTRY/smarttask/eureka-server:$IMAGE_TAG
+      - docker push $ECR_REGISTRY/smarttask/eureka-server:latest
+
+      - docker push $ECR_REGISTRY/smarttask/api-gateway:$IMAGE_TAG
+      - docker push $ECR_REGISTRY/smarttask/api-gateway:latest
+
+      - docker push $ECR_REGISTRY/smarttask/user-service:$IMAGE_TAG
+      - docker push $ECR_REGISTRY/smarttask/user-service:latest
+
+      - docker push $ECR_REGISTRY/smarttask/task-service:$IMAGE_TAG
+      - docker push $ECR_REGISTRY/smarttask/task-service:latest
+
+      - docker push $ECR_REGISTRY/smarttask/ai-service:$IMAGE_TAG
+      - docker push $ECR_REGISTRY/smarttask/ai-service:latest
+
   post_build:
     commands:
-      - echo "SmartTask build completed successfully."
+      - echo "SmartTask CI build and ECR push completed."
