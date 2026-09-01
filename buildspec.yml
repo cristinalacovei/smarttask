@@ -2,7 +2,6 @@ version: 0.2
 
 env:
   variables:
-    AWS_ACCOUNT_ID: "431988153353"
     AWS_REGION: "eu-central-1"
 
 phases:
@@ -20,9 +19,14 @@ phases:
 
   pre_build:
     commands:
-      - echo "Logging in to Amazon ECR..."
+      - echo "Preparing Amazon ECR authentication..."
+
+      - AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
       - ECR_REGISTRY=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+
+      - echo "Logging in to Amazon ECR..."
       - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+
       - IMAGE_TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
       - echo "Image tag = $IMAGE_TAG"
 
@@ -57,7 +61,7 @@ phases:
       - docker build -t $ECR_REGISTRY/smarttask/task-service:$IMAGE_TAG backend/task-service
       - docker build -t $ECR_REGISTRY/smarttask/ai-service:$IMAGE_TAG backend/ai-service
 
-      - echo "Tagging images as latest..."
+      - echo "Tagging Docker images as latest..."
 
       - docker tag $ECR_REGISTRY/smarttask/eureka-server:$IMAGE_TAG $ECR_REGISTRY/smarttask/eureka-server:latest
       - docker tag $ECR_REGISTRY/smarttask/api-gateway:$IMAGE_TAG $ECR_REGISTRY/smarttask/api-gateway:latest
@@ -65,7 +69,7 @@ phases:
       - docker tag $ECR_REGISTRY/smarttask/task-service:$IMAGE_TAG $ECR_REGISTRY/smarttask/task-service:latest
       - docker tag $ECR_REGISTRY/smarttask/ai-service:$IMAGE_TAG $ECR_REGISTRY/smarttask/ai-service:latest
 
-      - echo "Pushing Docker images to ECR..."
+      - echo "Pushing Docker images to Amazon ECR..."
 
       - docker push $ECR_REGISTRY/smarttask/eureka-server:$IMAGE_TAG
       - docker push $ECR_REGISTRY/smarttask/eureka-server:latest
@@ -84,6 +88,12 @@ phases:
 
   post_build:
     commands:
+      - |
+        if [ "$CODEBUILD_BUILD_SUCCEEDING" -ne 1 ]; then
+          echo "Build failed. Skipping deployment preparation."
+          exit 1
+        fi
+
       - echo "Creating ECS deployment definitions..."
 
       - |
@@ -111,7 +121,13 @@ phases:
         "$ECR_REGISTRY/smarttask/api-gateway:$IMAGE_TAG" \
         > imagedefinitions-gateway.json
 
-      - echo "SmartTask CI build and ECR push completed."
+      - echo "Deploying Angular frontend to S3..."
+      - aws s3 sync frontend/dist/frontend/browser s3://smarttask-frontend-2026-01 --delete
+
+      - echo "Invalidating CloudFront cache..."
+      - aws cloudfront create-invalidation --distribution-id E3T2FWSF0SBMNM --paths "/*"
+
+      - echo "SmartTask CI/CD build completed successfully."
 
 artifacts:
   files:
