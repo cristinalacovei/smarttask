@@ -1,0 +1,39 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      java: corretto21
+      nodejs: 22
+    commands:
+      - echo "Using Java:"
+      - java -version
+      - echo "Using Node:"
+      - node --version
+
+  build:
+    commands:
+      - echo "Building Eureka Server..."
+      - mvn -B -DskipTests package -f backend/eureka-server/pom.xml
+
+      - echo "Building API Gateway..."
+      - mvn -B -DskipTests package -f backend/api-gateway/pom.xml
+
+      - echo "Building User Service..."
+      - mvn -B -DskipTests package -f backend/user-service/pom.xml
+
+      - echo "Building Task Service..."
+      - mvn -B -DskipTests package -f backend/task-service/pom.xml
+
+      - echo "Building AI Service..."
+      - mvn -B -DskipTests package -f backend/ai-service/pom.xml
+
+      - echo "Building Angular frontend..."
+      - cd frontend
+      - npm ci
+      - npm run build
+      - cd ..
+
+  post_build:
+    commands:
+      - echo "SmartTask build completed successfully."
