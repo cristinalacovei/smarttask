@@ -53,6 +53,29 @@ public class UserService {
         return toResponse(user);
     }
 
+    public UserResponse getOrCreateCurrentUser(
+            String keycloakUserId,
+            String username,
+            String email
+    ) {
+
+        return userRepository.findByKeycloakUserId(keycloakUserId)
+                .map(this::toResponse)
+                .orElseGet(() -> {
+
+                    User user = new User(
+                            null,
+                            username,
+                            email,
+                            keycloakUserId
+                    );
+
+                    User savedUser = userRepository.save(user);
+
+                    return toResponse(savedUser);
+                });
+    }
+
     public void deleteUser(Long id) {
 
         if (!userRepository.existsById(id)) {

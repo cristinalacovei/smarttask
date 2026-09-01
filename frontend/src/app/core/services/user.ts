@@ -11,6 +11,10 @@ export class UserService {
 
   private readonly apiUrl = '/api/users';
 
+  getOrCreateCurrentUser(): Observable<User> {
+    return this.http.post<User>(`${this.apiUrl}/me`, {});
+  }
+
   getUsers(): Observable<User[]> {
     return this.http.get<User[]>(this.apiUrl);
   }
