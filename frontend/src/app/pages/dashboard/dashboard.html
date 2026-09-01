@@ -1,0 +1,127 @@
+<div class="page-shell">
+  <section class="dashboard-hero panel">
+    <div class="hero-content">
+      <span class="eyebrow">SMARTTASK WORKSPACE</span>
+
+      <h1>
+        Welcome back,
+        {{ keycloakService.getUsername() }}.
+      </h1>
+
+      <p>Organize your work, track your progress and use AI to build a smarter study plan.</p>
+
+      <div class="hero-actions">
+        <a routerLink="/tasks" class="btn btn-primary"> Manage Tasks </a>
+
+        <a routerLink="/ai-plan" class="btn btn-secondary"> Generate AI Plan </a>
+      </div>
+    </div>
+
+    <div class="hero-decoration">
+      <div class="hero-orb">
+        <span>{{ totalTasks() }}</span>
+        <small>tasks</small>
+      </div>
+    </div>
+  </section>
+
+  <section class="overview-section">
+    <div class="section-heading">
+      <div>
+        <h2>Task Overview</h2>
+        <p>Your current workload at a glance.</p>
+      </div>
+    </div>
+
+    @if (loading()) {
+      <div class="panel loading-card">Loading statistics...</div>
+    }
+
+    @if (error()) {
+      <div class="feedback feedback-error">
+        {{ error() }}
+      </div>
+    }
+
+    @if (!loading() && !error()) {
+      <div class="stats-grid">
+        <div class="stat-card panel">
+          <div class="stat-icon total">01</div>
+
+          <div>
+            <span class="stat-label">Total Tasks</span>
+            <strong>{{ totalTasks() }}</strong>
+          </div>
+        </div>
+
+        <div class="stat-card panel">
+          <div class="stat-icon todo">02</div>
+
+          <div>
+            <span class="stat-label">To Do</span>
+            <strong>{{ todoTasks() }}</strong>
+          </div>
+        </div>
+
+        <div class="stat-card panel">
+          <div class="stat-icon progress">03</div>
+
+          <div>
+            <span class="stat-label">In Progress</span>
+            <strong>{{ inProgressTasks() }}</strong>
+          </div>
+        </div>
+
+        <div class="stat-card panel">
+          <div class="stat-icon done">04</div>
+
+          <div>
+            <span class="stat-label">Completed</span>
+            <strong>{{ doneTasks() }}</strong>
+          </div>
+        </div>
+      </div>
+    }
+  </section>
+
+  <section class="quick-actions">
+    <h2>Quick Actions</h2>
+
+    <div class="action-grid">
+      <a routerLink="/tasks" class="action-card panel">
+        <span class="action-number">01</span>
+
+        <div>
+          <h3>My Tasks</h3>
+          <p>Create, prioritize and manage your work.</p>
+        </div>
+
+        <span class="arrow">→</span>
+      </a>
+
+      <a routerLink="/ai-plan" class="action-card panel">
+        <span class="action-number">02</span>
+
+        <div>
+          <h3>AI Study Planner</h3>
+          <p>Generate a personalized plan from your deadlines.</p>
+        </div>
+
+        <span class="arrow">→</span>
+      </a>
+
+      @if (isAdmin()) {
+        <a routerLink="/admin" class="action-card panel">
+          <span class="action-number">03</span>
+
+          <div>
+            <h3>Administration</h3>
+            <p>Inspect users and application activity.</p>
+          </div>
+
+          <span class="arrow">→</span>
+        </a>
+      }
+    </div>
+  </section>
+</div>

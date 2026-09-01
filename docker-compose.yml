@@ -1,0 +1,231 @@
+services:
+
+  postgres:
+    image: postgres:16
+    container_name: smarttask-postgres
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    ports:
+      - "5433:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+    networks:
+      - smarttask-network
+
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.2
+    container_name: smarttask-keycloak
+
+    command: start-dev
+
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+
+      KC_HOSTNAME: http://localhost:8180
+
+      JAVA_OPTS_APPEND: "-Xms128m -Xmx384m"
+
+    ports:
+      - "8180:8080"
+
+    volumes:
+      - ./infrastructure/keycloak/data:/opt/keycloak/data
+
+    networks:
+      - smarttask-network
+
+
+  eureka-server:
+    image: smarttask-eureka:latest
+    container_name: smarttask-eureka
+
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx256m"
+
+    ports:
+      - "8761:8761"
+
+    networks:
+      - smarttask-network
+
+
+  user-service:
+    image: smarttask-user:latest
+    container_name: smarttask-user
+
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx320m"
+
+      DB_URL: jdbc:postgresql://postgres:5432/smarttask
+      DB_USERNAME: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+
+      EUREKA_DEFAULT_ZONE: http://eureka-server:8761/eureka/
+
+      KEYCLOAK_ISSUER_URI: http://localhost:8180/realms/smarttask
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/smarttask/protocol/openid-connect/certs
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+      eureka-server:
+        condition: service_started
+
+      keycloak:
+        condition: service_started
+
+    ports:
+      - "8081:8081"
+
+    networks:
+      - smarttask-network
+
+
+  task-service:
+    image: smarttask-task:latest
+    container_name: smarttask-task
+
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx320m"
+
+      DB_URL: jdbc:postgresql://postgres:5432/smarttask
+      DB_USERNAME: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+
+      EUREKA_DEFAULT_ZONE: http://eureka-server:8761/eureka/
+
+      KEYCLOAK_ISSUER_URI: http://localhost:8180/realms/smarttask
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/smarttask/protocol/openid-connect/certs
+      KEYCLOAK_TOKEN_URI: http://keycloak:8080/realms/smarttask/protocol/openid-connect/token
+
+      TASK_SERVICE_CLIENT_SECRET: ${TASK_SERVICE_CLIENT_SECRET}
+
+      USER_SERVICE_URL: http://user-service:8081
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+      eureka-server:
+        condition: service_started
+
+      keycloak:
+        condition: service_started
+
+      user-service:
+        condition: service_started
+
+    ports:
+      - "8082:8082"
+
+    networks:
+      - smarttask-network
+
+
+  ai-service:
+    image: smarttask-ai:latest
+    container_name: smarttask-ai
+
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx320m"
+
+      EUREKA_DEFAULT_ZONE: http://eureka-server:8761/eureka/
+
+      KEYCLOAK_ISSUER_URI: http://localhost:8180/realms/smarttask
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/smarttask/protocol/openid-connect/certs
+      KEYCLOAK_TOKEN_URI: http://keycloak:8080/realms/smarttask/protocol/openid-connect/token
+
+      AI_SERVICE_CLIENT_SECRET: ${AI_SERVICE_CLIENT_SECRET}
+
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+
+      USER_SERVICE_URL: http://user-service:8081
+      TASK_SERVICE_URL: http://task-service:8082
+
+    depends_on:
+      eureka-server:
+        condition: service_started
+
+      keycloak:
+        condition: service_started
+
+      user-service:
+        condition: service_started
+
+      task-service:
+        condition: service_started
+
+    ports:
+      - "8083:8083"
+
+    networks:
+      - smarttask-network
+
+
+  api-gateway:
+    image: smarttask-gateway:latest
+    container_name: smarttask-gateway
+
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx256m"
+
+      EUREKA_DEFAULT_ZONE: http://eureka-server:8761/eureka/
+
+      KEYCLOAK_ISSUER_URI: http://localhost:8180/realms/smarttask
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/smarttask/protocol/openid-connect/certs
+
+    depends_on:
+      eureka-server:
+        condition: service_started
+
+      keycloak:
+        condition: service_started
+
+    ports:
+      - "8080:8080"
+
+    networks:
+      - smarttask-network
+
+
+  frontend:
+    image: smarttask-frontend:latest
+    container_name: smarttask-frontend
+
+    depends_on:
+      api-gateway:
+        condition: service_started
+
+    ports:
+      - "4200:80"
+
+    networks:
+      - smarttask-network
+
+
+volumes:
+  postgres_data:
+
+
+networks:
+  smarttask-network:
+    driver: bridge

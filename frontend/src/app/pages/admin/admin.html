@@ -1,0 +1,96 @@
+<div class="page-shell">
+  <div class="page-heading">
+    <span class="admin-label">ADMINISTRATION</span>
+
+    <h1>User Management</h1>
+
+    <p>Inspect registered SmartTask users and review their assigned tasks.</p>
+  </div>
+
+  @if (loading()) {
+    <div class="panel admin-state">Loading users...</div>
+  }
+
+  @if (error()) {
+    <div class="feedback feedback-error">
+      {{ error() }}
+    </div>
+  }
+
+  <div class="admin-layout">
+    <section>
+      <div class="section-title">
+        <h2>Users</h2>
+        <span>{{ users().length }} registered</span>
+      </div>
+
+      <div class="users-list">
+        @for (user of users(); track user.id) {
+          <article class="user-card panel" [class.selected]="selectedUser()?.id === user.id">
+            <div class="user-avatar-large">
+              {{ user.username.charAt(0).toUpperCase() }}
+            </div>
+
+            <div class="user-details">
+              <h3>{{ user.username }}</h3>
+              <p>{{ user.email }}</p>
+              <span>User #{{ user.id }}</span>
+            </div>
+
+            <button class="btn btn-secondary" type="button" (click)="viewTasks(user)">
+              View Tasks
+            </button>
+          </article>
+        }
+      </div>
+    </section>
+
+    @if (selectedUser()) {
+      <section class="selected-user panel">
+        <div class="selected-heading">
+          <div>
+            <span>USER TASKS</span>
+            <h2>{{ selectedUser()!.username }}</h2>
+          </div>
+
+          <button type="button" class="close-button" (click)="closeTasks()">×</button>
+        </div>
+
+        @if (loadingTasks()) {
+          <p class="muted">Loading tasks...</p>
+        }
+
+        @if (tasksError()) {
+          <div class="feedback feedback-error">
+            {{ tasksError() }}
+          </div>
+        }
+
+        @if (!loadingTasks() && !tasksError() && selectedUserTasks().length === 0) {
+          <div class="admin-empty">This user has no tasks.</div>
+        }
+
+        <div class="admin-task-list">
+          @for (task of selectedUserTasks(); track task.id) {
+            <article class="admin-task">
+              <div class="admin-task-heading">
+                <h3>{{ task.title }}</h3>
+
+                <span class="mini-status" [class.done]="task.status === 'DONE'">
+                  {{ task.status }}
+                </span>
+              </div>
+
+              <p>{{ task.description }}</p>
+
+              <div class="admin-task-meta">
+                <span>{{ task.priority }}</span>
+                <span>{{ task.deadline }}</span>
+              </div>
+            </article>
+          }
+        </div>
+      </section>
+    }
+  </div>
+</div>

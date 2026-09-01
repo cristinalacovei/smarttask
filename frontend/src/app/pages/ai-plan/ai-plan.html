@@ -1,0 +1,58 @@
+<div class="page-shell">
+  <div class="ai-hero panel">
+    <span class="ai-label">SMARTTASK AI</span>
+
+    <h1>AI Study Planner</h1>
+
+    <p>
+      Turn your tasks, priorities and deadlines into a focused study plan generated specifically for
+      your workload.
+    </p>
+
+    <button
+      class="btn btn-primary generate-button"
+      type="button"
+      (click)="generatePlan()"
+      [disabled]="loading()"
+    >
+      @if (loading()) {
+        Generating your plan...
+      } @else {
+        Generate Study Plan
+      }
+    </button>
+  </div>
+
+  @if (error()) {
+    <div class="feedback feedback-error ai-feedback">
+      {{ error() }}
+    </div>
+  }
+
+  @if (loading()) {
+    <section class="generation-state panel">
+      <div class="loader"></div>
+
+      <h2>Building your plan</h2>
+
+      <p>SmartTask AI is reviewing priorities and deadlines.</p>
+    </section>
+  }
+
+  @if (plan() && !loading()) {
+    <section class="plan-card panel">
+      <div class="plan-heading">
+        <div>
+          <span class="ai-label">GENERATED PLAN</span>
+          <h2>Your Study Plan</h2>
+        </div>
+
+        <button class="btn btn-secondary" type="button" (click)="generatePlan()">Regenerate</button>
+      </div>
+
+      <div class="plan-content">
+        <pre>{{ plan() }}</pre>
+      </div>
+    </section>
+  }
+</div>

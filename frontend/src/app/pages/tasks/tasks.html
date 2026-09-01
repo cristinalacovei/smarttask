@@ -1,0 +1,292 @@
+<div class="page-shell">
+  <div class="page-heading">
+    <span class="eyebrow">TASK MANAGEMENT</span>
+    <h1>My Tasks</h1>
+
+    <p>Keep your workload organized and move tasks from idea to completion.</p>
+  </div>
+
+  <div class="tasks-layout">
+    <aside class="create-panel panel">
+      <div class="panel-heading">
+        <span class="panel-number">+</span>
+
+        <div>
+          <h2>New Task</h2>
+          <p>Add something to your workload.</p>
+        </div>
+      </div>
+
+      <form #createForm="ngForm" (ngSubmit)="createTask()" class="task-form">
+        <div class="form-group">
+          <label for="title">Title</label>
+
+          <input
+            id="title"
+            name="title"
+            type="text"
+            [(ngModel)]="newTask.title"
+            #title="ngModel"
+            required
+            maxlength="150"
+            placeholder="e.g. Learn Spring Security"
+          />
+
+          @if (title.invalid && title.touched) {
+            <span class="field-error"> Please enter a valid title. </span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="description">Description</label>
+
+          <textarea
+            id="description"
+            name="description"
+            [(ngModel)]="newTask.description"
+            #description="ngModel"
+            required
+            maxlength="1000"
+            placeholder="What needs to be done?"
+          ></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="priority">Priority</label>
+
+            <select id="priority" name="priority" [(ngModel)]="newTask.priority">
+              <option value="LOW">Low</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="HIGH">High</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="deadline">Deadline</label>
+
+            <input
+              id="deadline"
+              name="deadline"
+              type="date"
+              [(ngModel)]="newTask.deadline"
+              [min]="today"
+              required
+            />
+          </div>
+        </div>
+
+        @if (createError()) {
+          <div class="feedback feedback-error">
+            {{ createError() }}
+          </div>
+        }
+
+        @if (createSuccess()) {
+          <div class="feedback feedback-success">
+            {{ createSuccess() }}
+          </div>
+        }
+
+        <button
+          class="btn btn-primary submit-button"
+          type="submit"
+          [disabled]="createForm.invalid || creating()"
+        >
+          @if (creating()) {
+            Creating...
+          } @else {
+            Create Task
+          }
+        </button>
+      </form>
+    </aside>
+
+    <section class="task-section">
+      <div class="task-section-heading">
+        <div>
+          <h2>Your workload</h2>
+          <p>{{ tasks().length }} tasks currently available</p>
+        </div>
+      </div>
+
+      @if (updateSuccess()) {
+        <div class="feedback feedback-success">
+          {{ updateSuccess() }}
+        </div>
+      }
+
+      @if (deleteError()) {
+        <div class="feedback feedback-error">
+          {{ deleteError() }}
+        </div>
+      }
+
+      @if (loading()) {
+        <div class="empty-state panel">Loading your tasks...</div>
+      }
+
+      @if (error()) {
+        <div class="feedback feedback-error">
+          {{ error() }}
+        </div>
+      }
+
+      @if (!loading() && tasks().length === 0) {
+        <div class="empty-state panel">
+          <div class="empty-icon">✓</div>
+
+          <h3>No tasks yet</h3>
+
+          <p>Create your first task using the form on the left.</p>
+        </div>
+      }
+
+      <div class="task-grid">
+        @for (task of tasks(); track task.id) {
+          <article class="task-card panel">
+            @if (editingTaskId() === task.id) {
+              <form class="task-form edit-form" (ngSubmit)="saveEdit()">
+                <div class="edit-heading">
+                  <h3>Edit Task</h3>
+
+                  <button type="button" class="close-edit" (click)="cancelEdit()">×</button>
+                </div>
+
+                <div class="form-group">
+                  <label>Title</label>
+
+                  <input name="editTitle" [(ngModel)]="editTask.title" required maxlength="150" />
+                </div>
+
+                <div class="form-group">
+                  <label>Description</label>
+
+                  <textarea
+                    name="editDescription"
+                    [(ngModel)]="editTask.description"
+                    required
+                  ></textarea>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Priority</label>
+
+                    <select name="editPriority" [(ngModel)]="editTask.priority">
+                      <option value="LOW">Low</option>
+                      <option value="MEDIUM">Medium</option>
+                      <option value="HIGH">High</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Status</label>
+
+                    <select name="editStatus" [(ngModel)]="editTask.status">
+                      <option value="TODO">To Do</option>
+                      <option value="IN_PROGRESS">In Progress</option>
+                      <option value="DONE">Done</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label>Deadline</label>
+
+                  <input name="editDeadline" type="date" [(ngModel)]="editTask.deadline" required />
+                </div>
+
+                @if (updateError()) {
+                  <div class="feedback feedback-error">
+                    {{ updateError() }}
+                  </div>
+                }
+
+                <div class="edit-actions">
+                  <button class="btn btn-primary" type="submit" [disabled]="updating()">
+                    @if (updating()) {
+                      Saving...
+                    } @else {
+                      Save Changes
+                    }
+                  </button>
+
+                  <button class="btn btn-secondary" type="button" (click)="cancelEdit()">
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            } @else {
+              <div class="task-card-top">
+                <span
+                  class="priority-badge"
+                  [class.priority-high]="task.priority === 'HIGH'"
+                  [class.priority-medium]="task.priority === 'MEDIUM'"
+                  [class.priority-low]="task.priority === 'LOW'"
+                >
+                  {{ task.priority }}
+                </span>
+
+                <span
+                  class="status-badge"
+                  [class.status-todo]="task.status === 'TODO'"
+                  [class.status-progress]="task.status === 'IN_PROGRESS'"
+                  [class.status-done]="task.status === 'DONE'"
+                >
+                  {{ task.status }}
+                </span>
+              </div>
+
+              <div class="task-content">
+                <h3>{{ task.title }}</h3>
+                <p>{{ task.description }}</p>
+              </div>
+
+              <div class="deadline">
+                <span>Deadline</span>
+                <strong>{{ task.deadline }}</strong>
+              </div>
+
+              <div class="task-actions">
+                <button class="btn btn-secondary" type="button" (click)="startEdit(task)">
+                  Edit
+                </button>
+
+                <button
+                  class="btn btn-primary"
+                  type="button"
+                  (click)="changeStatus(task)"
+                  [disabled]="updatingStatusTaskId() === task.id"
+                >
+                  @if (updatingStatusTaskId() === task.id) {
+                    Updating...
+                  } @else if (task.status === 'TODO') {
+                    Start
+                  } @else if (task.status === 'IN_PROGRESS') {
+                    Complete
+                  } @else {
+                    Reopen
+                  }
+                </button>
+
+                <button
+                  class="btn btn-danger"
+                  type="button"
+                  (click)="deleteTask(task)"
+                  [disabled]="deletingTaskId() === task.id"
+                >
+                  @if (deletingTaskId() === task.id) {
+                    Deleting...
+                  } @else {
+                    Delete
+                  }
+                </button>
+              </div>
+            }
+          </article>
+        }
+      </div>
+    </section>
+  </div>
+</div>
