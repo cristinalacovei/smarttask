@@ -28,12 +28,19 @@ phases:
 
   build:
     commands:
-      - echo "Building backend..."
-
+      - echo "Building Eureka Server..."
       - mvn -B -DskipTests package -f backend/eureka-server/pom.xml
+
+      - echo "Building API Gateway..."
       - mvn -B -DskipTests package -f backend/api-gateway/pom.xml
+
+      - echo "Building User Service..."
       - mvn -B -DskipTests package -f backend/user-service/pom.xml
+
+      - echo "Building Task Service..."
       - mvn -B -DskipTests package -f backend/task-service/pom.xml
+
+      - echo "Building AI Service..."
       - mvn -B -DskipTests package -f backend/ai-service/pom.xml
 
       - echo "Building Angular frontend..."
@@ -77,4 +84,39 @@ phases:
 
   post_build:
     commands:
+      - echo "Creating ECS deployment definitions..."
+
+      - |
+        printf '[{"name":"eureka-server","imageUri":"%s"}]' \
+        "$ECR_REGISTRY/smarttask/eureka-server:$IMAGE_TAG" \
+        > imagedefinitions-eureka.json
+
+      - |
+        printf '[{"name":"user-service","imageUri":"%s"}]' \
+        "$ECR_REGISTRY/smarttask/user-service:$IMAGE_TAG" \
+        > imagedefinitions-user.json
+
+      - |
+        printf '[{"name":"task-service","imageUri":"%s"}]' \
+        "$ECR_REGISTRY/smarttask/task-service:$IMAGE_TAG" \
+        > imagedefinitions-task.json
+
+      - |
+        printf '[{"name":"ai-service","imageUri":"%s"}]' \
+        "$ECR_REGISTRY/smarttask/ai-service:$IMAGE_TAG" \
+        > imagedefinitions-ai.json
+
+      - |
+        printf '[{"name":"api-gateway","imageUri":"%s"}]' \
+        "$ECR_REGISTRY/smarttask/api-gateway:$IMAGE_TAG" \
+        > imagedefinitions-gateway.json
+
       - echo "SmartTask CI build and ECR push completed."
+
+artifacts:
+  files:
+    - imagedefinitions-eureka.json
+    - imagedefinitions-user.json
+    - imagedefinitions-task.json
+    - imagedefinitions-ai.json
+    - imagedefinitions-gateway.json
